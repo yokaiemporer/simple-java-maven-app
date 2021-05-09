@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: maven-kube
+  labels:
+    app: maven-kube
+spec:
+  containers:
+    - name: maven-test-kube
+      image: maven-test
+      imagePullPolicy: IfNotPresent   
