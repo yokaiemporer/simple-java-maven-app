@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+    environment { 
+        pwd_now="java-app/simple-java-maven-app"
+    }
+    tools { 
+        maven 'jenkins-maven' 
+        jdk 'JAVA_HOME'
+        
+    }
+    stages {
+        stage('INIT_TEST') {
+            steps {
+                sh "mvn --version"
+                sh "java --version"
+                sh "docker --version"
+                sh "rm -rf java-app | true"
+                sh "docker rmi maven-test | true"
+                sh "kubectl delete pod maven-kube | true"
+                
+            }
+        }
+        stage('test build maven artifact')
+        {
+            steps{
+                sh 'mkdir java-app && cd java-app && git clone https://github.com/yokaiemporer/simple-java-maven-app.git'
+                sh 'cd $pwd_now && mvn clean package | grep SUCCESS'
+                sh 'cd $pwd_now/target && java -jar my-app-1.0-SNAPSHOT.jar'
+                
+            }
+        }
+        stage('Build as Docker image') {
+            steps {
+                echo "building mvn app as docker image"
+                sh 'cd $pwd_now && docker build -t maven-test .'
+                
+            }
+        }
+        stage('Deploy image in kubernetes') {
+            steps {
+                echo 'Deploying image in kubernetes'
+                sh 'cd $pwd_now && kubectl apply -f kube-test.yml && sleep 5'
+            }
+        }
+        stage('Test output')
+        {
+            steps{
+                sh 'kubectl logs maven-kube'
+            }
+        }
+    }
+    post {
+        
+        success {
+            echo 'succeeded!'
+        }
+        unstable {
+            echo 'I am unstable :/'
+        }
+        failure {
+            echo 'I failed :('
+        }
+        changed {
+            echo 'Things were different before...'
+        }
+    }
+}
